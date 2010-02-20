@@ -1,0 +1,153 @@
+The `sfDoctrineMasterSlavePlugin` plugin manages database connections and
+directs queries to the appropriate connection: either the master or a slave
+database.
+
+Once the plugin is enabled you can mark a connection as the master connection
+in `databases.yml` by using the string "master" in its name:
+
+    all:
+      master:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=database;host:master.example.com
+          username: root
+          password: ~
+      slave:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=database;host:slave.example.com
+          username: root
+          password: ~
+
+Alternatively, you can provide an `is_master` parameter in the configuration:
+
+    all:
+      doctrine:
+        class: sfDoctrineDatabase
+        param:
+          dsn:       mysql:dbname=database;host:master.example.com
+          username:  root
+          password:  ~
+          is_master: true
+
+If no connection is marked as the master connection using either of these
+techniques, the first connection configured first will be used. If multiple
+connections are marked as master, only the last connection marked will be used
+as the master connection; the others will be used as slaves.
+
+If your configuration includes more than one slave database, the plugin will
+select one of them at random to use for the duration of the request.
+
+Accessing the right connection
+------------------------------
+
+You can access the master or slave connections from the configuration object:
+
+    [php]
+    ProjectConfiguration::getActive()->getMasterConnection();
+    ProjectConfiguration::getActive()->getSlaveConnection();
+
+The plugin interacts with Doctrine as your database connection objects are
+created and updates the current connection set in the `Doctrine_Manager` to
+be the master connection. This way, any calls to
+`Doctrine_Manager::connection()` will return the master connection, which is
+usually what you need when calling that method (i.e. when beginning a
+transaction).
+
+>**NOTE**
+>The slave database accessor `->getSlaveConnection()` includes logic to check
+>whether the master database has any open transactions, and will return the
+>master connection in that case.
+
+Choosing from multiple slaves
+-----------------------------
+
+If you have multiple slave connections configured in `databases.yml`, the
+plugin will choose one at random to use for the duration of the current
+request. If you want to customize the logic surrounding how a slave connection
+is selected, you can do so by listening to the `doctrine.select_slave` event.
+
+    /** Listens to the doctrine.select_slave event. */
+    public function selectSlave(sfEvent $event)
+    {
+      if (in_array('slave1', $event['slaves]))
+      {
+        $event->setReturnValue('slave1');
+        return true;
+      }
+    }
+
+The `doctrine.select_slave` event includes the following parameters:
+
+  * `group`:  The group to select a slave connection from
+  * `master`: The name of the master connection
+  * `slaves`: An array of slave connection names
+
+Notice this event receives the names of connections as parameters, not the
+connection objects themselves. You can access the connection objects in your
+event listener by calling
+`Doctrine_Manager::getInstance()->getConnection($name)`.
+
+Connecting to multiple schemas
+------------------------------
+
+If your schema assigns different connections to different models, you will
+need to organize the master and slave connections for each of these schema
+into groups using the `group` parameter:
+
+    all:
+      # db1 connections
+      db1_master:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=db1;host:db1-master.example.com
+          username: root
+          password: ~
+          group:    db1
+      db1_slave:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=db1;host:db1-slave.example.com
+          username: root
+          password: ~
+          group:    db1
+
+      # db2 connections
+      db2_master:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=db2;host:db2-master.example.com
+          username: root
+          password: ~
+          group:    db2
+      db2_slave:
+        class: sfDoctrineDatabase
+        param:
+          dsn:      mysql:dbname=db2;host:db2-slave.example.com
+          username: root
+          password: ~
+          group:    db2
+
+Emulating read-only connections
+-------------------------------
+
+It's important to be able to test whether your connection management is
+working correctly even when you're not connecting to any read-only databases.
+The plugin provides a connection listener that emulates a read-only connection
+for this purpose. Setup distinct master and slave connections in
+`databases.yml` to enable this emulation in debug and test modes.
+
+    dev:
+      doctrine:
+        class: sfDoctrineDatabase
+        param:
+          dsn:       mysql:dbname=database;host=localhost
+          username:  root
+          password:  ~
+          is_master: true
+      slave:
+        class: sfDoctrineDatabase
+        param:
+          dsn:       mysql:dbname=database;host=localhost
+          username:  root
+          password:  ~
