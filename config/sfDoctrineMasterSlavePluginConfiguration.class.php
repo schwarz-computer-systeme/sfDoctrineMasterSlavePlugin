@@ -134,5 +134,7 @@ class sfDoctrineMasterSlavePluginConfiguration extends sfPluginConfiguration
     {
       $options['baseClassName'] = 'sfDoctrineMasterSlaveRecord';
     }
+
+    return $options;
   }
 }
