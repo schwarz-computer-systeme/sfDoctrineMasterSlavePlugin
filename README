@@ -138,16 +138,10 @@ for this purpose. Setup distinct master and slave connections in
 `databases.yml` to enable this emulation in debug and test modes.
 
     dev:
-      doctrine:
+      master: &master
         class: sfDoctrineDatabase
         param:
           dsn:       mysql:dbname=database;host=localhost
           username:  root
           password:  ~
-          is_master: true
-      slave:
-        class: sfDoctrineDatabase
-        param:
-          dsn:       mysql:dbname=database;host=localhost
-          username:  root
-          password:  ~
+      slave: *master
