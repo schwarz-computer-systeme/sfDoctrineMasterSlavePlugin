@@ -106,7 +106,7 @@ class sfDoctrineMasterSlaveConnectionManager
   /**
    * Returns a slave connection for a certain group.
    * 
-   * @param string $group A connection group name
+   * @param string|Doctrine_Connection $group A Doctrine connection or connection group name
    * 
    * @return Doctrine_Connection A Doctrine connection object
    * 
@@ -117,6 +117,11 @@ class sfDoctrineMasterSlaveConnectionManager
     if (null === $group)
     {
       $group = $this->getDefaultGroup();
+    }
+
+    if ($group instanceof Doctrine_Connection)
+    {
+      $group = $this->getConnectionGroup($group);
     }
 
     // use the master connection if we're in a transaction

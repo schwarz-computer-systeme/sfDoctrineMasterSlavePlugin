@@ -5,7 +5,7 @@
  */
 include dirname(__FILE__).'/../../../../../test/bootstrap/unit.php';
 
-$t = new lime_test(19);
+$t = new lime_test(21);
 
 $manager = Doctrine_Manager::getInstance();
 $pdo = new PDO('sqlite://'.sfConfig::get('sf_cache_dir').'/master_slave_test.sqlite');
@@ -65,11 +65,11 @@ $connectionManager->setConnections(array());
 try
 {
   $connectionManager->getMasterConnection('default');
-  $t->fail('->getMasterConnection() throws an exception if there is not master connection');
+  $t->fail('->getMasterConnection() throws an exception if there is no master connection');
 }
 catch (Exception $e)
 {
-  $t->pass('->getMasterConnection() throws an exception if there is not master connection');
+  $t->pass('->getMasterConnection() throws an exception if there is no master connection');
 }
 
 $connectionManager->setConnections(array(
@@ -90,6 +90,8 @@ $slave = $connectionManager->getSlaveConnection('default');
 $connections = $connectionManager->getConnections();
 $t->is($slave->getName(), $connections['default']['current_slave'], '->getSlaveConnection() returns a slave');
 $t->ok(in_array($connections['default']['current_slave'], $connections['default']['slaves']), '->getSlaveConnection() returns a slave');
+$t->ok(in_array($connectionManager->getSlaveConnection($conn3)->getName(), $connections['default']['slaves']), '->getSlaveConnection() accepts a master connection');
+$t->ok(in_array($connectionManager->getSlaveConnection($conn2)->getName(), $connections['default']['slaves']), '->getSlaveConnection() accepts a slave connection');
 
 $slave = $connectionManager->getSlaveConnection();
 $connections = $connectionManager->getConnections();
